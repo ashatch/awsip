@@ -1,0 +1,88 @@
+#!/bin/bash
+VERSION=1.0.0
+
+function usage {
+  echo "Currently supporting EC2 Instance resources in a CF stack"
+  echo ""
+  echo "Usage:"
+  echo "   awsip cf [options...] <stack name>"
+  echo "Options:"
+  echo "  -n --name        Specific EC2 Resource name"
+  echo "     --prefix      Prefix for resource names, e.g. ClusterBox"
+  echo "  -p --profile     AWS profile (default default)"
+  echo ""
+  exit 1
+}
+
+function version {
+  echo "awsip ${VERSION}"
+  exit 1
+}
+
+# options
+PROFILE=default
+QUERY="--query StackResourceSummaries[?ResourceType=='AWS::EC2::Instance'].PhysicalResourceId"
+
+# consume the cf argument giving us room to add more capability later
+
+key="$1"
+case $key in
+  cf)
+  # supported
+  ;;
+  -v|--version)
+  version
+  ;;
+  -h|--help)
+  usage
+  ;;
+  *)
+    usage
+  ;;
+esac
+
+shift
+
+while [[ $# -gt 1 ]]
+do
+  key="$1"
+  case $key in
+      -p|--profile)
+      PROFILE="$2"
+      shift
+      ;;
+      -n|--name)
+      QNAME="$2"
+      QUERY="--query StackResourceSummaries[?LogicalResourceId=='${QNAME}'].PhysicalResourceId"
+      shift
+      ;;
+      --prefix)
+      PREFIX="$2"
+      QUERY="--query StackResourceSummaries[?starts_with(LogicalResourceId,'${PREFIX}')].PhysicalResourceId"
+      shift
+      ;;
+      -v|--version)
+      version
+      ;;
+      *)
+        # unknown option
+      ;;
+  esac
+
+  shift
+done
+
+STACK=$1
+
+if [ ! "$STACK" ]; then
+  usage
+fi
+
+id=$(aws cloudformation list-stack-resources --stack-name ${STACK} ${QUERY} --output text)
+
+if [ ! "${id}" ]; then
+   echo "No EC2 instances found"
+   exit 1
+fi
+
+aws ec2 describe-instances --profile ${PROFILE} --instance-ids ${id} --query Reservations[*].Instances[*].PublicIpAddress --output text
