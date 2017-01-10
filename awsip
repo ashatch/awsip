@@ -6,6 +6,8 @@ function usage {
   echo ""
   echo "Usage:"
   echo "   awsip cf [options...] <stack name>"
+  echo "   awsip cfasg [options...] <stack name>"
+  echo ""
   echo "Options:"
   echo "  -h --help        Show this usage information"
   echo "  -v --version     Report the current version"
@@ -22,6 +24,7 @@ function version {
   exit 1
 }
 
+MODE="cf"
 # options
 PROFILE=default
 QUERY="--query StackResourceSummaries[?ResourceType=='AWS::EC2::Instance'].PhysicalResourceId"
@@ -32,6 +35,9 @@ key="$1"
 case $key in
   cf)
   # supported
+  ;;
+  cfasg)
+  MODE="cfasg"
   ;;
   -v|--version)
   version
@@ -84,7 +90,18 @@ if [ ! "$STACK" ]; then
   usage
 fi
 
-id=$(aws cloudformation list-stack-resources --stack-name ${STACK} ${QUERY} --output text)
+if [ "${MODE}" == "cfasg" ]; then
+  asgid=$(aws cloudformation list-stack-resources --stack-name ${STACK} ${QUERY} --output text)
+
+  if [ ! "${asgid}" ]; then
+     echo "No ASG found"
+     exit 1
+  fi
+
+  id=$(aws autoscaling describe-auto-scaling-groups --auto-scaling-group-name ${asgid} --query AutoScalingGroups[*].Instances[*].InstanceId --output text)
+else
+  id=$(aws cloudformation list-stack-resources --stack-name ${STACK} ${QUERY} --output text)
+fi
 
 if [ ! "${id}" ]; then
    echo "No EC2 instances found"

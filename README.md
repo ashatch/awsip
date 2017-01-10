@@ -5,6 +5,7 @@ Find ip addresses of AWS resources
 
     Usage:
        awsip cf [options...] <stack name>
+       awsip cfasg [options...] <stack name>
     Options:
        -h --help        Show this usage information
        -v --version     Report the current version
@@ -12,6 +13,20 @@ Find ip addresses of AWS resources
           --prefix      Prefix for resource names, e.g. ClusterBox
        -p --profile     AWS profile (default default)
        -l --list        Output as comma separated list
+
+# Examples
+
+Finding ips for an instance resource a particular name
+
+    awsip cf --name LoadTester my-stack
+
+Finding ips for instances with a resource name of a particular prefix:
+
+    awsip cf --prefix ClusterNode my-stack
+
+Finding ips for a cloudformed ASG
+
+     awsip cfasg --name ClusterGroup my-stack
 
 # Installation
 
