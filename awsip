@@ -15,6 +15,7 @@ function usage {
   echo "     --prefix      Prefix for resource names, e.g. ClusterBox"
   echo "  -p --profile     AWS profile (default default)"
   echo "  -l --list        Output as comma separated list"
+  echo "     --private     Retrieve private IPs"
   echo ""
   exit 1
 }
@@ -70,6 +71,9 @@ do
       QUERY="--query StackResourceSummaries[?starts_with(LogicalResourceId,'${PREFIX}')].PhysicalResourceId"
       shift
       ;;
+      --private)
+      PRIVATE="on"
+      ;;
       -v|--version)
       version
       ;;
@@ -108,7 +112,11 @@ if [ ! "${id}" ]; then
    exit 1
 fi
 
-ips=$(aws ec2 describe-instances --profile ${PROFILE} --instance-ids ${id} --query Reservations[*].Instances[*].PublicIpAddress --output text)
+if [[ "${PRIVATE}" = "on" ]]; then
+  ips=$(aws ec2 describe-instances --profile ${PROFILE} --instance-ids ${id} --query Reservations[*].Instances[*].PrivateIpAddress --output text)
+else
+  ips=$(aws ec2 describe-instances --profile ${PROFILE} --instance-ids ${id} --query Reservations[*].Instances[*].PublicIpAddress --output text)
+fi
 
 if [[ ${LIST} = "on" ]]; then
   IPLIST=$(sed 's| |,|g' <<< $ips)
